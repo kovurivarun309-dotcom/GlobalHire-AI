@@ -1,0 +1,1 @@
+package com.globalhire.dto;public record CostRequest(String companyCountry,String hiringCountry,double annualSalary,int employees,String employmentType,double benefits,boolean visaRequired,double visaCost,double recruitmentCost,double relocationCost){}

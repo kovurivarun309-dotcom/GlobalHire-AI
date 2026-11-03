@@ -1,0 +1,1 @@
+package com.globalhire.dto; public final class AuthDtos{public record Register(String fullName,String email,String password){} public record Login(String email,String password){} public record Token(String token,String role,String email){} public record Forgot(String email){} public record Reset(String token,String password){}}

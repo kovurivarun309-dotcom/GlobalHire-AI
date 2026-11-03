@@ -1,0 +1,1 @@
+package com.globalhire; import org.springframework.boot.SpringApplication;import org.springframework.boot.autoconfigure.SpringBootApplication;@SpringBootApplication public class GlobalHireApplication{public static void main(String[]a){SpringApplication.run(GlobalHireApplication.class,a);}}
