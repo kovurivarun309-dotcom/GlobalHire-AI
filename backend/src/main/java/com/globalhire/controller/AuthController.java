@@ -1,10 +1,114 @@
+
 package com.globalhire.controller;
-import com.globalhire.dto.AuthDtos.*;import com.globalhire.entity.User;import com.globalhire.repository.UserRepository;import com.globalhire.security.JwtService;import org.springframework.security.crypto.password.PasswordEncoder;import org.springframework.web.bind.annotation.*;import java.util.*;import java.time.*;
-@RestController @RequestMapping("/api/auth") public class AuthController{
- final UserRepository repo;final PasswordEncoder enc;final JwtService jwt;final Map<String,Map<String,Object>> resetTokens=new HashMap<>();
- public AuthController(UserRepository r,PasswordEncoder e,JwtService j){repo=r;enc=e;jwt=j;}
- @PostMapping("/register")public Map<String,Object> reg(@RequestBody Register x){if(x.email()==null||x.password()==null||x.password().length()<8)throw new IllegalArgumentException("Password must contain at least 8 characters");if(repo.findByEmail(x.email()).isPresent())throw new IllegalArgumentException("Email already exists");User u=new User();u.setFullName(x.fullName());u.setEmail(x.email().toLowerCase());u.setPasswordHash(enc.encode(x.password()));u.setRole("USER");repo.save(u);return Map.of("message","Registered successfully");}
- @PostMapping("/login")public Token login(@RequestBody Login x){User u=repo.findByEmail(x.email().toLowerCase()).orElseThrow(()->new IllegalArgumentException("Invalid credentials"));if(!enc.matches(x.password(),u.getPasswordHash()))throw new IllegalArgumentException("Invalid credentials");return new Token(jwt.generate(u.getEmail(),u.getRole()),u.getRole(),u.getEmail());}
- @PostMapping("/forgot-password")public Map<String,String> forgot(@RequestBody Forgot x){String token=UUID.randomUUID().toString();resetTokens.put(token,Map.of("email",x.email().toLowerCase(),"expires",Instant.now().plus(Duration.ofMinutes(15))));return Map.of("message","Reset token generated for this academic demo. In production send it by email.","resetToken",token);}
- @PostMapping("/reset-password")public Map<String,String> reset(@RequestBody Reset x){var v=resetTokens.remove(x.token());if(v==null||Instant.now().isAfter((Instant)v.get("expires")))throw new IllegalArgumentException("Invalid or expired reset token");User u=repo.findByEmail((String)v.get("email")).orElseThrow(()->new IllegalArgumentException("Account not found"));u.setPasswordHash(enc.encode(x.password()));repo.save(u);return Map.of("message","Password reset successfully");}
+
+import com.globalhire.dto.AuthDtos.*;
+import com.globalhire.entity.User;
+import com.globalhire.repository.UserRepository;
+import com.globalhire.security.JwtService;
+
+import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.web.bind.annotation.*;
+
+import java.util.*;
+import java.time.*;
+
+@RestController
+@RequestMapping("/api/auth")
+public class AuthController {
+
+    final UserRepository repo;
+    final PasswordEncoder enc;
+    final JwtService jwt;
+
+    final Map<String, Map<String, Object>> resetTokens = new HashMap<>();
+
+    public AuthController(UserRepository r, PasswordEncoder e, JwtService j) {
+        repo = r;
+        enc = e;
+        jwt = j;
+    }
+
+    @PostMapping("/register")
+    public Map<String, Object> reg(@RequestBody Register x) {
+
+        if (x.email() == null || x.email().isBlank()
+                || x.password() == null || x.password().length() < 8) {
+            throw new IllegalArgumentException(
+                    "Valid email and password of at least 8 characters are required"
+            );
+        }
+
+        String email = x.email().trim().toLowerCase();
+
+        if (repo.findByEmail(email).isPresent()) {
+            throw new IllegalArgumentException("Email already exists");
+        }
+
+        User u = new User();
+        u.setFullName(x.fullName());
+        u.setEmail(email);
+        u.setPasswordHash(enc.encode(x.password()));
+        u.setRole("USER");
+
+        repo.save(u);
+
+        return Map.of("message", "Registered successfully");
+    }
+
+    @PostMapping("/login")
+    public Token login(@RequestBody Login x) {
+
+        User u = repo.findByEmail(x.email().trim().toLowerCase())
+                .orElseThrow(() -> new IllegalArgumentException("Invalid credentials"));
+
+        if (!enc.matches(x.password(), u.getPasswordHash())) {
+            throw new IllegalArgumentException("Invalid credentials");
+        }
+
+        return new Token(
+                jwt.generate(u.getEmail(), u.getRole()),
+                u.getRole(),
+                u.getEmail()
+        );
+    }
+
+    @PostMapping("/forgot-password")
+    public Map<String, String> forgot(@RequestBody Forgot x) {
+
+        String token = UUID.randomUUID().toString();
+
+        resetTokens.put(token, Map.of(
+                "email", x.email().trim().toLowerCase(),
+                "expires", Instant.now().plus(Duration.ofMinutes(15))
+        ));
+
+        return Map.of(
+                "message", "Reset token generated for this academic demo.",
+                "resetToken", token
+        );
+    }
+
+    @PostMapping("/reset-password")
+    public Map<String, String> reset(@RequestBody Reset x) {
+
+        if (x.password() == null || x.password().length() < 8) {
+            throw new IllegalArgumentException(
+                    "Password must contain at least 8 characters"
+            );
+        }
+
+        var v = resetTokens.remove(x.token());
+
+        if (v == null || Instant.now().isAfter((Instant) v.get("expires"))) {
+            throw new IllegalArgumentException("Invalid or expired reset token");
+        }
+
+        User u = repo.findByEmail((String) v.get("email"))
+                .orElseThrow(() -> new IllegalArgumentException("Account not found"));
+
+        u.setPasswordHash(enc.encode(x.password()));
+        repo.save(u);
+
+        return Map.of("message", "Password reset successfully");
+    }
 }
